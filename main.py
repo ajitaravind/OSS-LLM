@@ -11,22 +11,30 @@ from langchain_core.runnables import RunnablePassthrough, RunnableParallel
 
 from langchain_community.document_loaders import WebBaseLoader
 
-#Langchain WebBase loader is a simple webloader that works for most of the URLs.
+#Langchain WebBase loader is a simple webloader that works for most of the URLs. We will use some of the excellent langchain blogs for this exercise
 
-loader = WebBaseLoader("https://lilianweng.github.io/posts/2023-06-23-agent/")
-docs = loader.load()
+urls = ["https://blog.langchain.dev/langgraph-multi-agent-workflows/",
+        "https://blog.langchain.dev/langgraph/",
+        "https://blog.langchain.dev/deconstructing-rag/"]
 
-#print first 200 characters to check how the documents look, this is a quick sanity check
+docs = [WebBaseLoader(url).load() for url in urls]
 
-print(docs[0].page_content[:200])
+def flatten(docs):
+    flat_list = []
+    for row in docs:
+        flat_list += row
+    return flat_list
 
-#we will use Recursive Character Text Splitter for this exercise, as it works well for text based contents (remember, our document is a blog)
+final_docs = flatten(docs)
+print(final_docs[0].page_content[:200])
+
+#we will use Recursive Character Text Splitter for this exercise, as it works well for text based contents (remember, our documents are blogs)
 text_splitter = RecursiveCharacterTextSplitter(
     chunk_size=200,
     chunk_overlap=20
 )
 
-chunks = text_splitter.split_documents(docs)
+chunks = text_splitter.split_documents(final_docs)
 
 #Now lets store the chunks into a Chroma vector database. We will persist the data for future retrievals.
 
@@ -53,19 +61,11 @@ prompt = ChatPromptTemplate.from_template(template)
 
 model = ChatGroq(temperature=0, model_name="llama3-70b-8192")
 
-#now lets define our chain using Langchain Expression language. Simple way to understand this is, remember our prompt requires a dictionary
-#with two input variables - context and question (check our prompt again). We need to provide them right?
-#context - its a list of documents fetched by our retriever, we invoke retriever for this purpose.
-#question - we will just pass it along without doing any manipulation, thats why we are using RunnablePassthrough() runnable
-
 chain = (RunnableParallel({"context": retriever,"question": RunnablePassthrough()})
     | prompt
     | model
 )
 
 #now lets invoke the chain with the question.
-response = chain.invoke("what is self reflection") 
-
-print(response.content) #Self-reflection is a vital aspect that allows autonomous agents to improve iteratively by refining past action decisions and correcting previous mistakes. It plays a crucial role in real-world tasks.
-
-
+response = chain.invoke("what is routing") 
+print(response.content) 
