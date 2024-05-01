@@ -1,2 +1,4 @@
 .env
-__pycache_/
+__pycache__/
+__pycache__/sample.cpython-310.pyc
+__pycache__/loader.cpython-310.pyc
